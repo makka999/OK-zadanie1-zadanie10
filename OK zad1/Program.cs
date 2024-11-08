@@ -1,81 +1,81 @@
 ﻿using System;
-using Google.OrTools.LinearSolver;
+using Google.OrTools.Sat;
 
-class Program
+class SumyMatrix
 {
     static void Main()
     {
-        // Mateusz Kłaptocz 
-        // Ok - Optymalizacja kombinatoryczna
-        // z pliku zad1.pdf
-        // zadanie 5
-        // Wyznacz dokładne rozwiązanie poniższego problemu liniowego.
-        // max 𝑧 = 141𝑥1 + 393𝑥2 + 273𝑥3 + 804𝑥4 + 175𝑥5
-        // 3𝑥1 + 5𝑥2 + 2𝑥3 + 5𝑥4 + 4𝑥5 ≤ 36
-        // 7𝑥1 + 12𝑥2 + 11𝑥3 + 10𝑥4 ≤ 21
-        // − 3𝑥2 + 12𝑥3 + 7𝑥4 + 2𝑥5 ≤ 17
-        // 0 ≤ 𝑥1, 𝑥2, 𝑥3, 𝑥4, 𝑥5 ≤ 20
+        // zadanie 10
 
+        CpModel model = new CpModel();
 
+        int rows = 3;
+        int cols = 4;
+        int NumMin = 1;
+        int NumMax = 12;
 
-        Solver solver = Solver.CreateSolver("SCIP");
-
-        // zmienne
-        Variable x1 = solver.MakeNumVar(0.0, 20.0, "x1"); 
-        Variable x2 = solver.MakeNumVar(0.0, 20.0, "x2"); 
-        Variable x3 = solver.MakeNumVar(0.0, 20.0, "x3"); 
-        Variable x4 = solver.MakeNumVar(0.0, 20.0, "x4"); 
-        Variable x5 = solver.MakeNumVar(0.0, 20.0, "x5"); 
-
-        // z = 141x1 + 393x2 + 273x3 + 804x4 + 175x5
-        Objective objective = solver.Objective();
-        objective.SetCoefficient(x1, 141);
-        objective.SetCoefficient(x2, 393);
-        objective.SetCoefficient(x3, 273);
-        objective.SetCoefficient(x4, 804);
-        objective.SetCoefficient(x5, 175);
-        objective.SetMaximization(); //max z
-
-        // ograniczenia
-        // 3x1 + 5x2 + 2x3 + 5x4 + 4x5 <= 36
-        Constraint c1 = solver.MakeConstraint(double.NegativeInfinity, 36);
-        c1.SetCoefficient(x1, 3);
-        c1.SetCoefficient(x2, 5);
-        c1.SetCoefficient(x3, 2);
-        c1.SetCoefficient(x4, 5);
-        c1.SetCoefficient(x5, 4);
-
-        // 7x1 + 12x2 + 11x3 + 10x4 <= 21
-        Constraint c2 = solver.MakeConstraint(double.NegativeInfinity, 21);
-        c2.SetCoefficient(x1, 7);
-        c2.SetCoefficient(x2, 12);
-        c2.SetCoefficient(x3, 11);
-        c2.SetCoefficient(x4, 10);
-
-        // -3x2 + 12x3 + 7x4 + 2x5 <= 17
-        Constraint c3 = solver.MakeConstraint(double.NegativeInfinity, 17);
-        c3.SetCoefficient(x2, -3);
-        c3.SetCoefficient(x3, 12);
-        c3.SetCoefficient(x4, 7);
-        c3.SetCoefficient(x5, 2);
-
-        // start solvera
-        Solver.ResultStatus resultStatus = solver.Solve();
-
-        // wyswielt wynik
-        if (resultStatus == Solver.ResultStatus.OPTIMAL)
+        IntVar[,] x = new IntVar[rows, cols];
+        for (int i = 0; i < rows; i++)
         {
-            Console.WriteLine("Rozwiązanie:");
-            Console.WriteLine("x1 = " + x1.SolutionValue());
-            Console.WriteLine("x2 = " + x2.SolutionValue());
-            Console.WriteLine("x3 = " + x3.SolutionValue());
-            Console.WriteLine("x4 = " + x4.SolutionValue());
-            Console.WriteLine("x5 = " + x5.SolutionValue());
-            Console.WriteLine("Maksymalna wartość funkcji z = " + objective.Value());
+            for (int j = 0; j < cols; j++)
+            {
+                x[i, j] = model.NewIntVar(NumMin, NumMax, $"x[{i},{j}]");
+            }
+        }
+
+        model.AddAllDifferent(x.Flatten());
+
+        model.Add(x[0, 0] + x[0, 1] + x[0, 2] + x[0, 3] == 30);
+        model.Add(x[1, 0] + x[1, 1] + x[1, 2] + x[1, 3] == 18);
+        model.Add(x[2, 0] + x[2, 1] + x[2, 2] + x[2, 3] == 30);
+
+        model.Add(x[0, 0] + x[1, 0] + x[2, 0] == 27);
+        model.Add(x[0, 1] + x[1, 1] + x[2, 1] == 16);
+        model.Add(x[0, 2] + x[1, 2] + x[2, 2] == 10);
+        model.Add(x[0, 3] + x[1, 3] + x[2, 3] == 25);
+
+        model.Add(x[0, 1] == 6); 
+        model.Add(x[1, 0] == 8); 
+        model.Add(x[2, 1] == 3); 
+
+        CpSolver solver = new CpSolver();
+
+        CpSolverStatus status = solver.Solve(model);
+
+        if (status == CpSolverStatus.Optimal || status == CpSolverStatus.Feasible)
+        {
+            Console.WriteLine("Rozwiązanie");
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    Console.Write($"{solver.Value(x[i, j])} ");
+                }
+                Console.WriteLine();
+            }
         }
         else
         {
-            Console.WriteLine("Problem nie ma rozwiązania.");
+            Console.WriteLine("Znów nie działa");
         }
+    }
+}
+
+public static class Extensions
+{
+    public static T[] Flatten<T>(this T[,] array)
+    {
+        int rows = array.GetLength(0);
+        int cols = array.GetLength(1);
+        T[] flat = new T[rows * cols];
+        int k = 0;
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                flat[k++] = array[i, j];
+            }
+        }
+        return flat;
     }
 }
